@@ -35,7 +35,11 @@ export class FarmGrid {
   public getTile(x: number, y: number): FarmTile {
     const wrappedX = ((x % this.size) + this.size) % this.size;
     const wrappedY = ((y % this.size) + this.size) % this.size;
-    return this.tiles[wrappedY][wrappedX];
+    const row = this.tiles[wrappedY];
+    if (!row) throw new Error(`Invalid row ${wrappedY}`);
+    const tile = row[wrappedX];
+    if (!tile) throw new Error(`Invalid tile ${wrappedX}`);
+    return tile;
   }
 
   public till(x: number, y: number): boolean {
@@ -135,8 +139,11 @@ export class FarmGrid {
     if (growthCycles <= 0) return;
 
     for (let y = 0; y < this.size; y++) {
+      const row = this.tiles[y];
+      if (!row) continue;
       for (let x = 0; x < this.size; x++) {
-        const tile = this.tiles[y][x];
+        const tile = row[x];
+        if (!tile) continue;
 
         // Evaporate water
         tile.moisture = Math.max(0, tile.moisture - 0.005 * ticks);
@@ -182,8 +189,11 @@ export class FarmGrid {
   private checkAreaCrop(cropType: CropType): number {
     let count = 0;
     for (let y = 0; y < this.size; y++) {
+      const row = this.tiles[y];
+      if (!row) continue;
       for (let x = 0; x < this.size; x++) {
-        const c = this.tiles[y][x].crop;
+        const tile = row[x];
+        const c = tile?.crop;
         if (c && c.type === cropType && c.isMature) {
           count++;
         }

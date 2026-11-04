@@ -115,7 +115,8 @@ export class Parser {
     this.consume(TokenType.COLON, "Expected ':' after function signature.");
 
     const body = this.block();
-    const end = body.length > 0 ? body[body.length - 1].span.end : this.previous().span.end;
+    const lastStmt = body[body.length - 1];
+    const end = lastStmt ? lastStmt.span.end : this.previous().span.end;
 
     return {
       type: 'FunctionDef',
@@ -138,7 +139,8 @@ export class Parser {
       const elifCondition = this.expression();
       this.consume(TokenType.COLON, "Expected ':' after elif condition.");
       const elifBody = this.block();
-      const end = elifBody.length > 0 ? elifBody[elifBody.length - 1].span.end : this.previous().span.end;
+      const lastElif = elifBody[elifBody.length - 1];
+      const end = lastElif ? lastElif.span.end : this.previous().span.end;
       elifs.push({
         condition: elifCondition,
         body: elifBody,
@@ -153,12 +155,16 @@ export class Parser {
     }
 
     let end = ifToken.span.end;
-    if (alternate && alternate.length > 0) {
-      end = alternate[alternate.length - 1].span.end;
-    } else if (elifs.length > 0) {
-      end = elifs[elifs.length - 1].span.end;
-    } else if (consequent.length > 0) {
-      end = consequent[consequent.length - 1].span.end;
+    const lastAlt = alternate ? alternate[alternate.length - 1] : undefined;
+    const lastEl = elifs[elifs.length - 1];
+    const lastConseq = consequent[consequent.length - 1];
+
+    if (lastAlt) {
+      end = lastAlt.span.end;
+    } else if (lastEl) {
+      end = lastEl.span.end;
+    } else if (lastConseq) {
+      end = lastConseq.span.end;
     }
 
     return {
@@ -176,7 +182,8 @@ export class Parser {
     const condition = this.expression();
     this.consume(TokenType.COLON, "Expected ':' after while condition.");
     const body = this.block();
-    const end = body.length > 0 ? body[body.length - 1].span.end : this.previous().span.end;
+    const lastStmt = body[body.length - 1];
+    const end = lastStmt ? lastStmt.span.end : this.previous().span.end;
 
     return {
       type: 'WhileStatement',
@@ -193,7 +200,8 @@ export class Parser {
     const iterable = this.expression();
     this.consume(TokenType.COLON, "Expected ':' after for loop iterable.");
     const body = this.block();
-    const end = body.length > 0 ? body[body.length - 1].span.end : this.previous().span.end;
+    const lastStmt = body[body.length - 1];
+    const end = lastStmt ? lastStmt.span.end : this.previous().span.end;
 
     return {
       type: 'ForStatement',
@@ -617,11 +625,11 @@ export class Parser {
   }
 
   private peek(): Token {
-    return this.tokens[this.current] || this.tokens[this.tokens.length - 1];
+    return this.tokens[this.current] ?? this.tokens[this.tokens.length - 1]!;
   }
 
   private previous(): Token {
-    return this.tokens[this.current - 1];
+    return this.tokens[this.current - 1] ?? this.tokens[0]!;
   }
 
   private consume(type: TokenType, message: string): Token {

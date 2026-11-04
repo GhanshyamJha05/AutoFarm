@@ -469,7 +469,10 @@ export class Interpreter {
 
           this.env.pushScope(userFn.name);
           for (let i = 0; i < userFn.params.length; i++) {
-            this.env.setLocal(userFn.params[i], args[i]);
+            const p = userFn.params[i];
+            if (p) {
+              this.env.setLocal(p, args[i]);
+            }
           }
 
           let returnValue = null;

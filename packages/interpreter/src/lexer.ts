@@ -251,7 +251,7 @@ export class Lexer {
       return tokens;
     }
 
-    const currentIndent = this.indentStack[this.indentStack.length - 1];
+    const currentIndent = this.indentStack[this.indentStack.length - 1] ?? 0;
     const endLoc = this.currentLocation();
 
     if (spaces > currentIndent) {
@@ -263,7 +263,7 @@ export class Lexer {
         span: { start: startLoc, end: endLoc },
       });
     } else if (spaces < currentIndent) {
-      while (this.indentStack.length > 1 && this.indentStack[this.indentStack.length - 1] > spaces) {
+      while (this.indentStack.length > 1 && (this.indentStack[this.indentStack.length - 1] ?? 0) > spaces) {
         this.indentStack.pop();
         tokens.push({
           type: TokenType.DEDENT,
@@ -272,7 +272,7 @@ export class Lexer {
           span: { start: startLoc, end: endLoc },
         });
       }
-      if (this.indentStack[this.indentStack.length - 1] !== spaces) {
+      if ((this.indentStack[this.indentStack.length - 1] ?? 0) !== spaces) {
         throw new LexerError(
           `Inconsistent indentation level (${spaces} spaces, expected ${this.indentStack[this.indentStack.length - 1]})`,
           { start: startLoc, end: endLoc },
@@ -510,11 +510,11 @@ export class Lexer {
 
   private peek(offset = 0): string {
     const idx = this.pos + offset;
-    return idx < this.length ? this.source[idx] : '';
+    return (idx < this.length && this.source[idx] !== undefined) ? this.source[idx]! : '';
   }
 
   private advance(): string {
-    const ch = this.source[this.pos];
+    const ch = this.source[this.pos] ?? '';
     this.pos++;
     if (ch === '\n') {
       this.line++;
