@@ -5,6 +5,8 @@ import {
   Drone,
   FarmTile,
   Direction,
+  TechTreeManager,
+  EconomyManager,
 } from '@autofarm/simulation';
 import {
   Lexer,
@@ -22,6 +24,8 @@ export interface GameState {
   tiles: FarmTile[][];
   drone: { x: number; y: number; facing: Direction };
   inventory: Record<string, number>;
+  coins: number;
+  unlockedNodes: string[];
   ticks: number;
   speed: number; // 1x to 50x
   status: SimStatus;
@@ -36,11 +40,15 @@ export interface GameState {
   pauseCode: () => void;
   stepCode: () => void;
   resetSim: () => void;
+  unlockTech: (nodeId: string) => void;
+  sellHarvest: () => void;
 }
 
 let activeGenerator: Generator<ExecutionYield, any, void> | null = null;
 let activeEngine: SimulationEngine | null = null;
 let animFrameId: number | null = null;
+const techManager = new TechTreeManager(['t1_grass_harvest']);
+const economyManager = new EconomyManager(0, {});
 
 const DEFAULT_SCRIPT = `# AUTOFARM: Automated Drone Script
 # Tier 1 Tutorial: Plant and harvest Golden Hay
@@ -72,10 +80,12 @@ export const useGameStore = create<GameState>((set, get) => {
 
   return {
     code: DEFAULT_SCRIPT,
-    gridSize: 4,
+    gridSize: 3,
     tiles: initial.tiles,
     drone: initial.drone,
     inventory: initial.inventory,
+    coins: 0,
+    unlockedNodes: techManager.serialize(),
     ticks: 0,
     speed: 5,
     status: 'idle',
@@ -85,6 +95,52 @@ export const useGameStore = create<GameState>((set, get) => {
 
     setCode: (code: string) => set({ code }),
     setSpeed: (speed: number) => set({ speed }),
+
+    unlockTech: (nodeId: string) => {
+      const state = get();
+      const check = techManager.canUnlock(nodeId, state.inventory);
+      if (!check.allowed) {
+        set({
+          consoleLogs: [...get().consoleLogs, `[Research Failed] ${check.reason}`],
+        });
+        return;
+      }
+
+      // Deduct inventory cost
+      const node = techManager.getNode(nodeId);
+      if (node) {
+        const nextInv = { ...state.inventory };
+        for (const [res, needed] of Object.entries(node.cost)) {
+          if (needed) nextInv[res] = (nextInv[res] || 0) - needed;
+        }
+        techManager.unlock(nodeId);
+        set({
+          inventory: nextInv,
+          gridSize: techManager.getFarmSize(),
+          unlockedNodes: techManager.serialize(),
+          consoleLogs: [
+            ...get().consoleLogs,
+            `[Research Complete] Unlocked '${node.name}'!`,
+          ],
+        });
+      }
+    },
+
+    sellHarvest: () => {
+      const state = get();
+      for (const [k, v] of Object.entries(state.inventory)) {
+        economyManager.addResource(k, v);
+      }
+      const earned = economyManager.sellAllCrops();
+      set({
+        inventory: {},
+        coins: economyManager.getCoins(),
+        consoleLogs: [
+          ...get().consoleLogs,
+          `[Market] Sold crops for ${earned} Gold Coins. Balance: ${economyManager.getCoins()} Coins.`,
+        ],
+      });
+    },
 
     resetSim: () => {
       if (animFrameId) cancelAnimationFrame(animFrameId);
@@ -154,10 +210,14 @@ export const useGameStore = create<GameState>((set, get) => {
           const parser = new Parser(tokens);
           const ast = parser.parse();
 
+          // Enforce tech-tree gating dynamically
+          const featureGate = new FeatureGate(techManager.getUnlockedFeatures());
+
           let interp!: Interpreter;
           const hostContext = engine.createHostContext(() => interp);
           interp = new Interpreter({
             seed: 1337,
+            featureGate,
             hostContext,
             onPrint: (msg) => {
               set((s) => ({ consoleLogs: [...s.consoleLogs, `[Log] ${msg}`] }));
@@ -230,3 +290,4 @@ export const useGameStore = create<GameState>((set, get) => {
     },
   };
 });
+

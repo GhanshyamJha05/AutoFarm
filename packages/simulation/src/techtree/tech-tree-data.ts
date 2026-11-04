@@ -1,0 +1,373 @@
+import { LanguageFeature } from '@autofarm/interpreter';
+import { CropType } from '../api-spec.js';
+
+export type TechCategory =
+  | 'language'
+  | 'drone'
+  | 'crops'
+  | 'expansion'
+  | 'automation';
+
+export interface TechCost {
+  hay?: number;
+  carrot?: number;
+  sunflower?: number;
+  pumpkin?: number;
+  treasure_maize?: number;
+  companion_herb?: number;
+  coins?: number;
+}
+
+export interface TechNode {
+  id: string;
+  name: string;
+  category: TechCategory;
+  tier: number;
+  description: string;
+  cost: TechCost;
+  prerequisites: string[];
+  unlockedFeatures?: LanguageFeature[];
+  unlockedCrops?: CropType[];
+  farmSizeUpgrade?: number;
+  droneSpeedBonus?: number; // Reduces tick cost multiplier
+  unlockedCommands?: string[];
+  x: number; // Graph layout coordinates for UI visualization
+  y: number;
+}
+
+export const TECH_TREE_NODES: TechNode[] = [
+  // --- TIER 1: Foundations (Hay & Carrots) ---
+  {
+    id: 't1_grass_harvest',
+    name: 'Hay Scythe',
+    category: 'crops',
+    tier: 1,
+    description: 'Enables automatic harvesting and planting of Golden Hay.',
+    cost: { coins: 0 },
+    prerequisites: [],
+    unlockedCrops: ['hay'],
+    unlockedCommands: ['plant', 'harvest'],
+    x: 100,
+    y: 100,
+  },
+  {
+    id: 't1_variables',
+    name: 'Basic Memory',
+    category: 'language',
+    tier: 1,
+    description: 'Enables variable assignment and storage registers.',
+    cost: { hay: 5 },
+    prerequisites: ['t1_grass_harvest'],
+    unlockedFeatures: ['variables'],
+    x: 240,
+    y: 80,
+  },
+  {
+    id: 't1_operators',
+    name: 'Operator Shortcuts',
+    category: 'language',
+    tier: 1,
+    description: 'Enables +=, -=, *=, and /= augmented arithmetic.',
+    cost: { hay: 10 },
+    prerequisites: ['t1_variables'],
+    unlockedFeatures: ['augmented_assignment'],
+    x: 380,
+    y: 80,
+  },
+  {
+    id: 't1_loops',
+    name: 'Continuous Cycles',
+    category: 'language',
+    tier: 1,
+    description: 'Enables while loop iteration for sustained tasks.',
+    cost: { hay: 15 },
+    prerequisites: ['t1_variables'],
+    unlockedFeatures: ['while_loops'],
+    x: 240,
+    y: 180,
+  },
+  {
+    id: 't1_ranges',
+    name: 'Range Iteration',
+    category: 'language',
+    tier: 1,
+    description: 'Enables for x in range(n) bounded iterations.',
+    cost: { hay: 25 },
+    prerequisites: ['t1_loops'],
+    unlockedFeatures: ['for_loops'],
+    x: 380,
+    y: 180,
+  },
+  {
+    id: 't1_tilling',
+    name: 'Tillage Drill',
+    category: 'drone',
+    tier: 1,
+    description: 'Unlocks till() to prepare fertile farmland.',
+    cost: { hay: 20 },
+    prerequisites: ['t1_grass_harvest'],
+    unlockedCommands: ['till'],
+    x: 100,
+    y: 220,
+  },
+  {
+    id: 't1_irrigation',
+    name: 'Hydro Tank',
+    category: 'drone',
+    tier: 1,
+    description: 'Unlocks water() and moisture sensors to irrigate soil.',
+    cost: { hay: 30 },
+    prerequisites: ['t1_tilling'],
+    unlockedCommands: ['water', 'get_tile_type'],
+    x: 100,
+    y: 320,
+  },
+  {
+    id: 't1_carrot',
+    name: 'Amber Carrots',
+    category: 'crops',
+    tier: 1,
+    description: 'Cultivate roots requiring hydrated, tilled beds.',
+    cost: { hay: 40 },
+    prerequisites: ['t1_irrigation'],
+    unlockedCrops: ['carrot'],
+    x: 240,
+    y: 320,
+  },
+  {
+    id: 't1_conditionals',
+    name: 'Branching Logic',
+    category: 'language',
+    tier: 1,
+    description: 'Enables if, elif, and else decision statements.',
+    cost: { hay: 50, carrot: 10 },
+    prerequisites: ['t1_ranges', 't1_carrot'],
+    unlockedFeatures: ['if_else'],
+    x: 380,
+    y: 320,
+  },
+  {
+    id: 't1_expand_3x3',
+    name: 'Sector Expansion 3x3',
+    category: 'expansion',
+    tier: 1,
+    description: 'Expands the active farm boundary to a 3x3 perimeter.',
+    cost: { hay: 80, carrot: 25 },
+    prerequisites: ['t1_conditionals'],
+    farmSizeUpgrade: 3,
+    x: 520,
+    y: 200,
+  },
+
+  // --- TIER 2: Structure, Functions & Sorting (Sunflowers & Pumpkins) ---
+  {
+    id: 't2_functions',
+    name: 'Subroutines',
+    category: 'language',
+    tier: 2,
+    description: 'Enables def custom_fn(args): function declarations.',
+    cost: { carrot: 50 },
+    prerequisites: ['t1_expand_3x3'],
+    unlockedFeatures: ['functions'],
+    x: 640,
+    y: 100,
+  },
+  {
+    id: 't2_math',
+    name: 'Advanced Arithmetic',
+    category: 'language',
+    tier: 2,
+    description: 'Enables modulo (%) and power (**) calculations.',
+    cost: { carrot: 60 },
+    prerequisites: ['t2_functions'],
+    unlockedFeatures: ['advanced_math'],
+    x: 780,
+    y: 100,
+  },
+  {
+    id: 't2_lists',
+    name: 'Array Registers',
+    category: 'language',
+    tier: 2,
+    description: 'Enables dynamic list indexing and storage.',
+    cost: { carrot: 80 },
+    prerequisites: ['t2_functions'],
+    unlockedFeatures: ['lists'],
+    x: 640,
+    y: 200,
+  },
+  {
+    id: 't2_sunflower',
+    name: 'Solar Flowers',
+    category: 'crops',
+    tier: 2,
+    description: 'Grows sunflowers blooming with random petal measurements.',
+    cost: { carrot: 100 },
+    prerequisites: ['t2_lists'],
+    unlockedCrops: ['sunflower'],
+    unlockedCommands: ['measure'],
+    x: 780,
+    y: 200,
+  },
+  {
+    id: 't2_swap',
+    name: 'Magnetic Swap',
+    category: 'drone',
+    tier: 2,
+    description: 'Unlocks swap(direction) to rearrange adjacent crops.',
+    cost: { sunflower: 15 },
+    prerequisites: ['t2_sunflower'],
+    unlockedCommands: ['swap'],
+    x: 920,
+    y: 200,
+  },
+  {
+    id: 't2_tuples',
+    name: 'Coordinate Tuples',
+    category: 'language',
+    tier: 2,
+    description: 'Enables immutable coordinate pairs like (x, y).',
+    cost: { sunflower: 25 },
+    prerequisites: ['t2_swap'],
+    unlockedFeatures: ['tuples'],
+    unlockedCommands: ['get_position'],
+    x: 920,
+    y: 100,
+  },
+  {
+    id: 't2_drone_thrust_1',
+    name: 'Ion Propellers I',
+    category: 'drone',
+    tier: 2,
+    description: 'Decreases drone action delays by 15%.',
+    cost: { sunflower: 40 },
+    prerequisites: ['t2_swap'],
+    droneSpeedBonus: 0.15,
+    x: 1060,
+    y: 100,
+  },
+  {
+    id: 't2_pumpkin',
+    name: 'Colossal Pumpkin',
+    category: 'crops',
+    tier: 2,
+    description: 'Mega-vegetable requiring 2D sweep planting.',
+    cost: { sunflower: 50 },
+    prerequisites: ['t2_swap'],
+    unlockedCrops: ['pumpkin'],
+    x: 920,
+    y: 300,
+  },
+  {
+    id: 't2_area_sensing',
+    name: 'Canopy Sensor',
+    category: 'automation',
+    tier: 2,
+    description: 'Unlocks can_harvest() and get_crop_state() probes.',
+    cost: { pumpkin: 20 },
+    prerequisites: ['t2_pumpkin'],
+    unlockedCommands: ['can_harvest', 'get_crop_state'],
+    x: 1060,
+    y: 300,
+  },
+  {
+    id: 't2_expand_4x4',
+    name: 'Sector Expansion 4x4',
+    category: 'expansion',
+    tier: 2,
+    description: 'Upgrades grid dimensions to a 4x4 sector.',
+    cost: { pumpkin: 50, sunflower: 60 },
+    prerequisites: ['t2_area_sensing'],
+    farmSizeUpgrade: 4,
+    x: 1200,
+    y: 200,
+  },
+
+  // --- TIER 3: Associative Structures, Pathfinding & Algorithms ---
+  {
+    id: 't3_dicts',
+    name: 'Key-Value Memory',
+    category: 'language',
+    tier: 3,
+    description: 'Enables associative dictionary lookup tables {key: value}.',
+    cost: { pumpkin: 100 },
+    prerequisites: ['t2_expand_4x4'],
+    unlockedFeatures: ['dicts'],
+    x: 1340,
+    y: 100,
+  },
+  {
+    id: 't3_companion_herbs',
+    name: 'Harmonic Herbs',
+    category: 'crops',
+    tier: 3,
+    description: 'Synergistic herbs that amplify nearby diverse crop yields.',
+    cost: { pumpkin: 150 },
+    prerequisites: ['t3_dicts'],
+    unlockedCrops: ['companion_herb'],
+    x: 1480,
+    y: 100,
+  },
+  {
+    id: 't3_drone_thrust_2',
+    name: 'Ion Propellers II',
+    category: 'drone',
+    tier: 3,
+    description: 'Further accelerates drone transit speed by 25%.',
+    cost: { companion_herb: 40 },
+    prerequisites: ['t3_companion_herbs'],
+    droneSpeedBonus: 0.25,
+    x: 1620,
+    y: 100,
+  },
+  {
+    id: 't3_labyrinth_maize',
+    name: 'Labyrinth Maize',
+    category: 'crops',
+    tier: 3,
+    description: 'Dense maize stalks forming mazes to test BFS/DFS solvers.',
+    cost: { companion_herb: 60 },
+    prerequisites: ['t3_companion_herbs'],
+    unlockedCrops: ['treasure_maize'],
+    x: 1480,
+    y: 220,
+  },
+  {
+    id: 't3_expand_6x6',
+    name: 'Sector Expansion 6x6',
+    category: 'expansion',
+    tier: 3,
+    description: 'Enlarges the testing grid to a spacious 6x6 plot.',
+    cost: { treasure_maize: 30, companion_herb: 80 },
+    prerequisites: ['t3_labyrinth_maize'],
+    farmSizeUpgrade: 6,
+    x: 1620,
+    y: 220,
+  },
+
+  // --- TIER 4: Mastery & High-Throughput Automation ---
+  {
+    id: 't4_turbocores',
+    name: 'Quantum Clocking',
+    category: 'automation',
+    tier: 4,
+    description: 'Halves instruction budget penalties and optimizes tick cost.',
+    cost: { treasure_maize: 100, companion_herb: 120 },
+    prerequisites: ['t3_expand_6x6'],
+    droneSpeedBonus: 0.35,
+    x: 1760,
+    y: 150,
+  },
+  {
+    id: 't4_expand_8x8',
+    name: 'Grand Estate 8x8',
+    category: 'expansion',
+    tier: 4,
+    description: 'Unlocks massive 8x8 farm matrix for industrial automation.',
+    cost: { treasure_maize: 250, companion_herb: 300 },
+    prerequisites: ['t4_turbocores'],
+    farmSizeUpgrade: 8,
+    x: 1900,
+    y: 150,
+  },
+];

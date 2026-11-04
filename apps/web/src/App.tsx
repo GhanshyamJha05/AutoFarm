@@ -4,7 +4,8 @@ import { CodeEditor } from './editor/CodeEditor';
 import { FarmCanvas } from './components/FarmCanvas';
 import { ControlBar } from './components/ControlBar';
 import { ConsolePanel } from './components/ConsolePanel';
-import { Cpu, BookOpen, Sparkles } from 'lucide-react';
+import { TechTreeModal } from './components/TechTreeModal';
+import { Cpu, BookOpen, GitFork } from 'lucide-react';
 
 export function App() {
   const code = useGameStore((s) => s.code);
@@ -12,6 +13,7 @@ export function App() {
   const activeLine = useGameStore((s) => s.activeLine);
   const errorMessage = useGameStore((s) => s.errorMessage);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [isTechTreeOpen, setIsTechTreeOpen] = useState(false);
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -39,8 +41,14 @@ export function App() {
 
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setIsTechTreeOpen(true)}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[#f3c875] hover:bg-[#e4b967] text-black font-semibold shadow transition"
+          >
+            <GitFork size={15} /> Tech Tree
+          </button>
+          <button
             onClick={toggleTheme}
-            className="text-xs px-2.5 py-1 rounded bg-[var(--color-panel-raised)] hover:bg-[#344d3d] border border-[var(--color-border)] text-[var(--color-ink-muted)] transition"
+            className="text-xs px-2.5 py-1.5 rounded bg-[var(--color-panel-raised)] hover:bg-[#344d3d] border border-[var(--color-border)] text-[var(--color-ink-muted)] transition"
           >
             {theme === 'dark' ? 'Light Theme' : 'Dark Theme'}
           </button>
@@ -76,6 +84,12 @@ export function App() {
           </div>
         </section>
       </main>
+
+      {/* Tech Tree Modal */}
+      <TechTreeModal
+        isOpen={isTechTreeOpen}
+        onClose={() => setIsTechTreeOpen(false)}
+      />
     </div>
   );
 }

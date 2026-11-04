@@ -33,3 +33,4 @@ export const ConsolePanel: React.FC = () => {
     </div>
   );
 };
+

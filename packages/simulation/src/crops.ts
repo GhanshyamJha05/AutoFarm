@@ -73,3 +73,4 @@ export const CROP_DEFINITIONS: Record<CropType, CropDefinition> = {
     baseSaleValue: 40,
   },
 };
+

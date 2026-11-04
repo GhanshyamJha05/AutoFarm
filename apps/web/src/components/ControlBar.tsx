@@ -13,6 +13,8 @@ export const ControlBar: React.FC = () => {
   const stepCode = useGameStore((s) => s.stepCode);
   const resetSim = useGameStore((s) => s.resetSim);
   const setSpeed = useGameStore((s) => s.setSpeed);
+  const coins = useGameStore((s) => s.coins);
+  const sellHarvest = useGameStore((s) => s.sellHarvest);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-4 p-3 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-lg shadow-sm">
@@ -81,8 +83,22 @@ export const ControlBar: React.FC = () => {
               </span>
             ))
           )}
+          {Object.keys(inventory).length > 0 && (
+            <button
+              onClick={sellHarvest}
+              className="ml-2 px-2 py-0.5 rounded bg-[#f3c875] text-black font-sans font-bold hover:bg-[#e4b967] transition cursor-pointer"
+            >
+              Sell All
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 bg-[#17251d] px-2.5 py-1.5 rounded border border-[var(--color-border)]">
+          <span className="text-[var(--color-ink-muted)]">COINS:</span>
+          <span className="text-[#f3c875] font-bold">{coins}</span>
         </div>
       </div>
     </div>
   );
 };
+

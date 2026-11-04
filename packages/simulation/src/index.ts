@@ -3,3 +3,6 @@ export * from './crops.js';
 export * from './farm.js';
 export * from './drone.js';
 export * from './engine.js';
+export * from './techtree/tech-tree-data.js';
+export * from './techtree/TechTreeManager.js';
+export * from './economy/EconomyManager.js';
