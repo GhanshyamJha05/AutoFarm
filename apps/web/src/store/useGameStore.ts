@@ -7,6 +7,10 @@ import {
   Direction,
   TechTreeManager,
   EconomyManager,
+  CampaignManager,
+  CAMPAIGN_LEVELS,
+  CampaignLevel,
+  LevelProgress,
 } from '@autofarm/simulation';
 import {
   Lexer,
@@ -26,6 +30,8 @@ export interface GameState {
   inventory: Record<string, number>;
   coins: number;
   unlockedNodes: string[];
+  currentLevelId: string;
+  campaignProgress: Record<string, LevelProgress>;
   ticks: number;
   speed: number; // 1x to 50x
   status: SimStatus;
@@ -36,6 +42,7 @@ export interface GameState {
   // Actions
   setCode: (code: string) => void;
   setSpeed: (speed: number) => void;
+  selectLevel: (levelId: string) => void;
   runCode: () => void;
   pauseCode: () => void;
   stepCode: () => void;
@@ -49,6 +56,7 @@ let activeEngine: SimulationEngine | null = null;
 let animFrameId: number | null = null;
 const techManager = new TechTreeManager(['t1_grass_harvest']);
 const economyManager = new EconomyManager(0, {});
+const campaignManager = new CampaignManager();
 
 const DEFAULT_SCRIPT = `# AUTOFARM: Automated Drone Script
 # Tier 1 Tutorial: Plant and harvest Golden Hay
@@ -76,25 +84,52 @@ export const useGameStore = create<GameState>((set, get) => {
     };
   };
 
-  const initial = initEngine(4);
+  const initialLevel = campaignManager.getCurrentLevel();
+  const initial = initEngine(initialLevel.gridSize);
 
   return {
-    code: DEFAULT_SCRIPT,
-    gridSize: 3,
+    code: initialLevel.startingCode,
+    gridSize: initialLevel.gridSize,
     tiles: initial.tiles,
     drone: initial.drone,
     inventory: initial.inventory,
     coins: 0,
     unlockedNodes: techManager.serialize(),
+    currentLevelId: initialLevel.id,
+    campaignProgress: {},
     ticks: 0,
     speed: 5,
     status: 'idle',
-    consoleLogs: ['[Engine] Ready. Write code and press Run.'],
+    consoleLogs: [`[Mission] Initialized Level ${initialLevel.number}: ${initialLevel.title}`],
     activeLine: null,
     errorMessage: null,
 
     setCode: (code: string) => set({ code }),
     setSpeed: (speed: number) => set({ speed }),
+
+    selectLevel: (levelId: string) => {
+      const lvl = campaignManager.getLevel(levelId);
+      if (!lvl) return;
+      campaignManager.setCurrentLevel(levelId);
+      if (animFrameId) cancelAnimationFrame(animFrameId);
+      activeGenerator = null;
+      activeEngine = null;
+
+      const freshEngine = new SimulationEngine({ gridSize: lvl.gridSize, seed: 1337 });
+      set({
+        currentLevelId: lvl.id,
+        code: lvl.startingCode,
+        gridSize: lvl.gridSize,
+        tiles: freshEngine.farm.toJSON().tiles,
+        drone: freshEngine.drone.getState(),
+        inventory: {},
+        ticks: 0,
+        status: 'idle',
+        activeLine: null,
+        errorMessage: null,
+        consoleLogs: [`[Mission] Switched to Level ${lvl.number}: ${lvl.title} (${lvl.pedagogicalFocus})`],
+      });
+    },
 
     unlockTech: (nodeId: string) => {
       const state = get();
@@ -211,7 +246,11 @@ export const useGameStore = create<GameState>((set, get) => {
           const ast = parser.parse();
 
           // Enforce tech-tree gating dynamically
-          const featureGate = new FeatureGate(techManager.getUnlockedFeatures());
+          const currentLvl = campaignManager.getLevel(state.currentLevelId);
+          const unlockedFeatures = currentLvl
+            ? [...techManager.getUnlockedFeatures(), ...currentLvl.allowedFeatures]
+            : techManager.getUnlockedFeatures();
+          const featureGate = new FeatureGate(unlockedFeatures);
 
           let interp!: Interpreter;
           const hostContext = engine.createHostContext(() => interp);
@@ -254,10 +293,31 @@ export const useGameStore = create<GameState>((set, get) => {
           for (let i = 0; i < currentSpeed; i++) {
             const next = activeGenerator.next();
             if (next.done) {
+              const finalTicks = get().ticks;
+              const finalInv = activeEngine ? activeEngine.drone.getState().inventory : get().inventory;
+              const evaluation = campaignManager.evaluateRun(
+                get().currentLevelId,
+                finalTicks,
+                finalInv,
+                get().code
+              );
+
+              const updatedProg: Record<string, LevelProgress> = {};
+              for (const p of campaignManager.serialize()) {
+                updatedProg[p.levelId] = p;
+              }
+
               set({
                 status: 'done',
                 activeLine: null,
-                consoleLogs: [...get().consoleLogs, `[Engine] Execution completed in ${get().ticks} ticks.`],
+                campaignProgress: updatedProg,
+                consoleLogs: [
+                  ...get().consoleLogs,
+                  `[Engine] Execution completed in ${finalTicks} ticks.`,
+                  evaluation.passed
+                    ? `[Mission Success] ${evaluation.reason}`
+                    : `[Mission Incomplete] ${evaluation.reason}`,
+                ],
               });
               activeGenerator = null;
               return;

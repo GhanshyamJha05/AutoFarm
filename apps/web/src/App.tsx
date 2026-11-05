@@ -5,7 +5,9 @@ import { FarmCanvas } from './components/FarmCanvas';
 import { ControlBar } from './components/ControlBar';
 import { ConsolePanel } from './components/ConsolePanel';
 import { TechTreeModal } from './components/TechTreeModal';
-import { Cpu, BookOpen, GitFork } from 'lucide-react';
+import { CampaignModal } from './components/campaign/CampaignModal';
+import { MissionObjectivesBanner } from './components/campaign/MissionObjectivesBanner';
+import { Cpu, BookOpen, GitFork, Compass } from 'lucide-react';
 
 export function App() {
   const code = useGameStore((s) => s.code);
@@ -14,6 +16,7 @@ export function App() {
   const errorMessage = useGameStore((s) => s.errorMessage);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [isTechTreeOpen, setIsTechTreeOpen] = useState(false);
+  const [isCampaignOpen, setIsCampaignOpen] = useState(false);
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -41,19 +44,28 @@ export function App() {
 
         <div className="flex items-center gap-3">
           <button
+            onClick={() => setIsCampaignOpen(true)}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[#a8ce79] hover:bg-[#96be67] text-[#17251d] font-semibold shadow transition cursor-pointer"
+          >
+            <Compass size={15} /> Campaign Missions
+          </button>
+          <button
             onClick={() => setIsTechTreeOpen(true)}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[#f3c875] hover:bg-[#e4b967] text-black font-semibold shadow transition"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-[#f3c875] hover:bg-[#e4b967] text-black font-semibold shadow transition cursor-pointer"
           >
             <GitFork size={15} /> Tech Tree
           </button>
           <button
             onClick={toggleTheme}
-            className="text-xs px-2.5 py-1.5 rounded bg-[var(--color-panel-raised)] hover:bg-[#344d3d] border border-[var(--color-border)] text-[var(--color-ink-muted)] transition"
+            className="text-xs px-2.5 py-1.5 rounded bg-[var(--color-panel-raised)] hover:bg-[#344d3d] border border-[var(--color-border)] text-[var(--color-ink-muted)] transition cursor-pointer"
           >
             {theme === 'dark' ? 'Light Theme' : 'Dark Theme'}
           </button>
         </div>
       </header>
+
+      {/* Mission Objectives Ribbon */}
+      <MissionObjectivesBanner />
 
       {/* Main Workspace: Farm Canvas + Code Editor */}
       <main className="flex-1 p-3 grid grid-cols-1 lg:grid-cols-2 gap-3 min-h-0 overflow-hidden">
@@ -84,6 +96,12 @@ export function App() {
           </div>
         </section>
       </main>
+
+      {/* Campaign Modal */}
+      <CampaignModal
+        isOpen={isCampaignOpen}
+        onClose={() => setIsCampaignOpen(false)}
+      />
 
       {/* Tech Tree Modal */}
       <TechTreeModal

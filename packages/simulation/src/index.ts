@@ -6,3 +6,6 @@ export * from './engine.js';
 export * from './techtree/tech-tree-data.js';
 export * from './techtree/TechTreeManager.js';
 export * from './economy/EconomyManager.js';
+export * from './campaign/campaign-data.js';
+export * from './campaign/CampaignManager.js';
+export * from './campaign/ReplayManager.js';

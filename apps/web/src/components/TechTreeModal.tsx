@@ -124,3 +124,4 @@ export const TechTreeModal: React.FC<TechTreeModalProps> = ({ isOpen, onClose })
     </div>
   );
 };
+
