@@ -53,3 +53,4 @@ export const MissionObjectivesBanner: React.FC = () => {
     </div>
   );
 };
+

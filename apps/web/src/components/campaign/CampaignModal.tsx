@@ -143,3 +143,4 @@ export const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose })
     </div>
   );
 };
+

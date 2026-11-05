@@ -115,3 +115,4 @@ export class CampaignManager {
     return Array.from(this.progress.values());
   }
 }
+
