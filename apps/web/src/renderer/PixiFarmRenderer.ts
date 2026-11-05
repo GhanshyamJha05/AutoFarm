@@ -1,5 +1,16 @@
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
-import { FarmTile, SoilType } from '@autofarm/simulation';
+import { FarmTile } from '@autofarm/simulation';
+
+interface Particle {
+  g: Graphics;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  alpha: number;
+  life: number;
+  color: number;
+}
 
 export class PixiFarmRenderer {
   private app: Application | null = null;
@@ -7,6 +18,9 @@ export class PixiFarmRenderer {
   private tileGraphics: Map<string, Graphics> = new Map();
   private droneGraphic: Container | null = null;
   private cropGraphics: Map<string, Container> = new Map();
+  private particles: Particle[] = [];
+  private particleContainer: Container | null = null;
+  private ambientSkyOverlay: Graphics | null = null;
   private tileSize = 64;
 
   public async init(canvas: HTMLCanvasElement, width: number, height: number): Promise<void> {
@@ -15,7 +29,7 @@ export class PixiFarmRenderer {
       canvas,
       width,
       height,
-      backgroundColor: 0x17251d,
+      backgroundColor: 0x141e18,
       resolution: window.devicePixelRatio || 1,
       autoDensity: true,
       antialias: true,
@@ -23,11 +37,75 @@ export class PixiFarmRenderer {
 
     this.container = new Container();
     this.app.stage.addChild(this.container);
+
+    this.particleContainer = new Container();
+    this.app.stage.addChild(this.particleContainer);
+
+    this.ambientSkyOverlay = new Graphics();
+    this.app.stage.addChild(this.ambientSkyOverlay);
+
+    // Pixi Ticker for fluid particles and animations
+    this.app.ticker.add((ticker) => {
+      this.updateParticles(ticker.deltaTime);
+    });
   }
 
   public resize(width: number, height: number): void {
     if (this.app) {
       this.app.renderer.resize(width, height);
+      if (this.ambientSkyOverlay) {
+        this.ambientSkyOverlay.clear();
+        this.ambientSkyOverlay.rect(0, 0, width, height);
+      }
+    }
+  }
+
+  /**
+   * Spawn particle burst on harvest or action
+   */
+  public spawnBurst(x: number, y: number, color: number = 0xf59e0b, count: number = 10): void {
+    if (!this.particleContainer) return;
+
+    for (let i = 0; i < count; i++) {
+      const g = new Graphics();
+      g.circle(0, 0, 3 + Math.random() * 2);
+      g.fill(color);
+      this.particleContainer.addChild(g);
+
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1.5 + Math.random() * 3.5;
+
+      this.particles.push({
+        g,
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.2, // slight upward float
+        alpha: 1,
+        life: 25 + Math.random() * 20,
+        color,
+      });
+    }
+  }
+
+  private updateParticles(delta: number): void {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i]!;
+      p.x += p.vx * delta;
+      p.y += p.vy * delta;
+      p.vy += 0.1 * delta; // gravity
+      p.life -= delta;
+      p.alpha = Math.max(0, p.life / 40);
+
+      p.g.x = p.x;
+      p.g.y = p.y;
+      p.g.alpha = p.alpha;
+
+      if (p.life <= 0) {
+        this.particleContainer?.removeChild(p.g);
+        p.g.destroy();
+        this.particles.splice(i, 1);
+      }
     }
   }
 
@@ -48,6 +126,23 @@ export class PixiFarmRenderer {
     this.container.x = offsetX;
     this.container.y = offsetY;
 
+    // Ambient day/night tint overlay tied to ticks (cycle every 2400 ticks)
+    if (this.ambientSkyOverlay) {
+      this.ambientSkyOverlay.clear();
+      const cycleProgress = (currentTick % 2400) / 2400; // 0 to 1
+      // Calculate night factor (peak darkness at midnight = 0.5)
+      const nightFactor = Math.sin(cycleProgress * Math.PI * 2);
+      if (nightFactor > 0.1) {
+        // Evening / night tint
+        this.ambientSkyOverlay.rect(0, 0, this.app.screen.width, this.app.screen.height);
+        this.ambientSkyOverlay.fill({ color: 0x090f1f, alpha: nightFactor * 0.35 });
+      } else if (nightFactor < -0.3) {
+        // Warm sunset tint
+        this.ambientSkyOverlay.rect(0, 0, this.app.screen.width, this.app.screen.height);
+        this.ambientSkyOverlay.fill({ color: 0xff8c00, alpha: Math.abs(nightFactor) * 0.12 });
+      }
+    }
+
     // Render Tiles
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
@@ -65,26 +160,27 @@ export class PixiFarmRenderer {
         g.clear();
 
         // Base soil color
-        let color = 0x3d5a45; // Grass
-        if (tile.soil === 'tilled') color = 0x5a3e2b; // Brown dirt
-        if (tile.soil === 'hydrated') color = 0x3b4239; // Dark wet soil
+        let color = 0x2e4734; // Deep pasture grass
+        if (tile.soil === 'tilled') color = 0x5a3e2b; // Rich tilled loam
+        if (tile.soil === 'hydrated') color = 0x364335; // Wet nutrient-rich soil
 
-        g.rect(x * this.tileSize, y * this.tileSize, this.tileSize - 2, this.tileSize - 2);
+        g.roundRect(x * this.tileSize, y * this.tileSize, this.tileSize - 2, this.tileSize - 2, 6);
         g.fill(color);
 
-        // Grid outline
-        g.stroke({ width: 1, color: 0x243328 });
+        // Tile border
+        g.stroke({ width: 1, color: 0x1f2f24 });
 
         // Moisture indicator strip
         if (tile.moisture > 0) {
-          const moistureH = Math.min(this.tileSize - 4, (tile.moisture / 100) * (this.tileSize - 4));
-          g.rect(
-            x * this.tileSize + 2,
-            y * this.tileSize + this.tileSize - 2 - moistureH,
+          const moistureH = Math.min(this.tileSize - 6, (tile.moisture / 100) * (this.tileSize - 6));
+          g.roundRect(
+            x * this.tileSize + 3,
+            y * this.tileSize + this.tileSize - 3 - moistureH,
             3,
-            moistureH
+            moistureH,
+            1.5
           );
-          g.fill(0x56a3a6);
+          g.fill(0x38bdf8);
         }
 
         // Render Crops
@@ -100,24 +196,24 @@ export class PixiFarmRenderer {
           const cropG = new Graphics();
           const centerX = x * this.tileSize + this.tileSize / 2;
           const centerY = y * this.tileSize + this.tileSize / 2;
-          const scale = 0.3 + (tile.crop.growth / 100) * 0.7;
+          const scale = 0.35 + (tile.crop.growth / 100) * 0.65;
 
           let cropColor = 0xa8ce79; // Hay green/yellow
-          if (tile.crop.type === 'hay') cropColor = tile.crop.isMature ? 0xf3c875 : 0xa8ce79;
-          if (tile.crop.type === 'carrot') cropColor = tile.crop.isMature ? 0xe67e22 : 0x7cb342;
-          if (tile.crop.type === 'sunflower') cropColor = 0xffd54f;
-          if (tile.crop.type === 'pumpkin') cropColor = tile.crop.isMature ? 0xd35400 : 0x85929e;
-          if (tile.crop.type === 'treasure_maize') cropColor = 0xf1c40f;
-          if (tile.crop.type === 'companion_herb') cropColor = 0x9b59b6;
+          if (tile.crop.type === 'hay') cropColor = tile.crop.isMature ? 0xf59e0b : 0x84cc16;
+          if (tile.crop.type === 'carrot') cropColor = tile.crop.isMature ? 0xf97316 : 0x22c55e;
+          if (tile.crop.type === 'sunflower') cropColor = 0xfacc15;
+          if (tile.crop.type === 'pumpkin') cropColor = tile.crop.isMature ? 0xea580c : 0x64748b;
+          if (tile.crop.type === 'treasure_maize') cropColor = 0xeab308;
+          if (tile.crop.type === 'companion_herb') cropColor = 0xa855f7;
 
-          // Crop circle / sprite shape
+          // Crop circle / stylized fruit
           cropG.circle(centerX, centerY, (this.tileSize / 3) * scale);
           cropG.fill(cropColor);
 
-          // Maturity glow or petal count
+          // Maturity glow aura
           if (tile.crop.isMature) {
-            cropG.circle(centerX, centerY, (this.tileSize / 3) * scale + 2);
-            cropG.stroke({ width: 2, color: 0xffffff });
+            cropG.circle(centerX, centerY, (this.tileSize / 3) * scale + 3);
+            cropG.stroke({ width: 2, color: 0xffffff, alpha: 0.85 });
           }
 
           cropContainer.addChild(cropG);
@@ -144,20 +240,20 @@ export class PixiFarmRenderer {
     if (!this.droneGraphic) {
       this.droneGraphic = new Container();
       const droneBody = new Graphics();
-      // Draw stylized high-tech quadcopter drone
-      droneBody.circle(0, 0, 14);
-      droneBody.fill(0x38bdf8); // Sky blue neon core
+      // Stylized high-tech quadcopter drone
+      droneBody.circle(0, 0, 15);
+      droneBody.fill(0x0ea5e9); // Electric cyan core
       droneBody.stroke({ width: 3, color: 0xffffff });
 
       // Rotors
-      droneBody.rect(-18, -18, 6, 6);
-      droneBody.rect(12, -18, 6, 6);
-      droneBody.rect(-18, 12, 6, 6);
-      droneBody.rect(12, 12, 6, 6);
-      droneBody.fill(0xe2e8f0);
+      droneBody.roundRect(-20, -20, 7, 7, 2);
+      droneBody.roundRect(13, -20, 7, 7, 2);
+      droneBody.roundRect(-20, 13, 7, 7, 2);
+      droneBody.roundRect(13, 13, 7, 7, 2);
+      droneBody.fill(0xf1f5f9);
 
       // Facing indicator arrow
-      droneBody.poly([0, -14, 6, -6, -6, -6]);
+      droneBody.poly([0, -16, 7, -7, -7, -7]);
       droneBody.fill(0xf43f5e);
 
       this.droneGraphic.addChild(droneBody);
@@ -167,7 +263,6 @@ export class PixiFarmRenderer {
     const targetX = droneState.x * this.tileSize + this.tileSize / 2;
     const targetY = droneState.y * this.tileSize + this.tileSize / 2;
 
-    // Smooth movement interpolation or instant positioning
     this.droneGraphic.x = targetX;
     this.droneGraphic.y = targetY;
 
@@ -185,4 +280,3 @@ export class PixiFarmRenderer {
     }
   }
 }
-

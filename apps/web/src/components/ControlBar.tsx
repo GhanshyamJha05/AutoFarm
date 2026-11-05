@@ -1,12 +1,13 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { Play, Pause, StepForward, RotateCcw, FastForward } from 'lucide-react';
+import { Play, Pause, StepForward, RotateCcw, FastForward, Volume2, VolumeX } from 'lucide-react';
 
 export const ControlBar: React.FC = () => {
   const status = useGameStore((s) => s.status);
   const speed = useGameStore((s) => s.speed);
   const ticks = useGameStore((s) => s.ticks);
   const inventory = useGameStore((s) => s.inventory);
+  const soundMuted = useGameStore((s) => s.soundMuted);
 
   const runCode = useGameStore((s) => s.runCode);
   const pauseCode = useGameStore((s) => s.pauseCode);
@@ -15,22 +16,29 @@ export const ControlBar: React.FC = () => {
   const setSpeed = useGameStore((s) => s.setSpeed);
   const coins = useGameStore((s) => s.coins);
   const sellHarvest = useGameStore((s) => s.sellHarvest);
+  const toggleMute = useGameStore((s) => s.toggleMute);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 p-3 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-lg shadow-sm">
+    <div
+      role="toolbar"
+      aria-label="Simulation Controls"
+      className="flex flex-wrap items-center justify-between gap-4 p-3 bg-[var(--color-panel)] border border-[var(--color-border)] rounded-lg shadow-sm"
+    >
       {/* Execution Controls */}
       <div className="flex items-center gap-2">
         {status === 'running' ? (
           <button
             onClick={pauseCode}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#e58878] hover:bg-[#d47060] text-black font-semibold rounded-md shadow transition"
+            aria-label="Pause Simulation"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#e58878] hover:bg-[#d47060] text-black font-semibold rounded-md shadow transition cursor-pointer"
           >
             <Pause size={16} /> Pause
           </button>
         ) : (
           <button
             onClick={runCode}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#a8ce79] hover:bg-[#92b865] text-[#17251d] font-semibold rounded-md shadow transition"
+            aria-label="Run Code"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#a8ce79] hover:bg-[#92b865] text-[#17251d] font-semibold rounded-md shadow transition cursor-pointer"
           >
             <Play size={16} /> Run
           </button>
@@ -38,28 +46,49 @@ export const ControlBar: React.FC = () => {
 
         <button
           onClick={stepCode}
-          className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-panel-raised)] hover:bg-[#344d3d] text-[var(--color-ink)] rounded-md border border-[var(--color-border)] transition"
+          aria-label="Step Single Instruction"
+          className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-panel-raised)] hover:bg-[#344d3d] text-[var(--color-ink)] rounded-md border border-[var(--color-border)] transition cursor-pointer"
         >
           <StepForward size={16} /> Step
         </button>
 
         <button
           onClick={resetSim}
-          className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-panel-raised)] hover:bg-[#344d3d] text-[var(--color-ink)] rounded-md border border-[var(--color-border)] transition"
+          aria-label="Reset Simulation"
+          className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-panel-raised)] hover:bg-[#344d3d] text-[var(--color-ink)] rounded-md border border-[var(--color-border)] transition cursor-pointer"
         >
           <RotateCcw size={16} /> Reset
+        </button>
+
+        <button
+          onClick={toggleMute}
+          aria-label={soundMuted ? 'Unmute Audio' : 'Mute Audio'}
+          className={`flex items-center p-2 rounded-md border border-[var(--color-border)] transition cursor-pointer ${
+            soundMuted
+              ? 'bg-red-950/40 text-red-300 border-red-800'
+              : 'bg-[var(--color-panel-raised)] text-[var(--color-ink)] hover:bg-[#344d3d]'
+          }`}
+        >
+          {soundMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
         </button>
       </div>
 
       {/* Speed Multiplier Slider */}
       <div className="flex items-center gap-2">
         <FastForward size={16} className="text-[#f3c875]" />
-        <span className="text-xs font-mono text-[var(--color-ink-muted)]">Speed: {speed}x</span>
+        <label htmlFor="speed-slider" className="text-xs font-mono text-[var(--color-ink-muted)]">
+          Speed: {speed}x
+        </label>
         <input
+          id="speed-slider"
           type="range"
           min="1"
           max="30"
           value={speed}
+          aria-valuemin={1}
+          aria-valuemax={30}
+          aria-valuenow={speed}
+          aria-label="Simulation execution speed multiplier"
           onChange={(e) => setSpeed(parseInt(e.target.value, 10))}
           className="w-24 accent-[#f3c875] cursor-pointer"
         />
@@ -101,4 +130,3 @@ export const ControlBar: React.FC = () => {
     </div>
   );
 };
-

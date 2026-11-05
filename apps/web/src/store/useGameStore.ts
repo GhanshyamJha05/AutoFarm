@@ -19,6 +19,7 @@ import {
   ExecutionYield,
   FeatureGate,
 } from '@autofarm/interpreter';
+import { soundManager } from '../audio/sound';
 
 export type SimStatus = 'idle' | 'running' | 'paused' | 'done' | 'error';
 
@@ -38,6 +39,7 @@ export interface GameState {
   consoleLogs: string[];
   activeLine: number | null;
   errorMessage: string | null;
+  soundMuted: boolean;
 
   // Actions
   setCode: (code: string) => void;
@@ -49,6 +51,7 @@ export interface GameState {
   resetSim: () => void;
   unlockTech: (nodeId: string) => void;
   sellHarvest: () => void;
+  toggleMute: () => void;
 }
 
 let activeGenerator: Generator<ExecutionYield, any, void> | null = null;
@@ -103,6 +106,13 @@ export const useGameStore = create<GameState>((set, get) => {
     consoleLogs: [`[Mission] Initialized Level ${initialLevel.number}: ${initialLevel.title}`],
     activeLine: null,
     errorMessage: null,
+    soundMuted: false,
+
+    toggleMute: () => {
+      const next = !get().soundMuted;
+      soundManager.setMuted(next);
+      set({ soundMuted: next });
+    },
 
     setCode: (code: string) => set({ code }),
     setSpeed: (speed: number) => set({ speed }),
