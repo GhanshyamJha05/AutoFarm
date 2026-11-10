@@ -15,6 +15,7 @@ export const FarmCanvas: React.FC = () => {
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
 
+    let destroyed = false;
     const renderer = new PixiFarmRenderer();
     rendererRef.current = renderer;
 
@@ -22,7 +23,13 @@ export const FarmCanvas: React.FC = () => {
     const height = containerRef.current.clientHeight || 500;
 
     renderer.init(canvasRef.current, width, height).then(() => {
+      if (destroyed) {
+        renderer.destroy();
+        return;
+      }
       renderer.renderFarm(gridSize, tiles, drone, ticks);
+    }).catch((err) => {
+      console.error('Failed to init PixiFarmRenderer:', err);
     });
 
     const handleResize = () => {
@@ -37,8 +44,10 @@ export const FarmCanvas: React.FC = () => {
     window.addEventListener('resize', handleResize);
 
     return () => {
+      destroyed = true;
       window.removeEventListener('resize', handleResize);
       renderer.destroy();
+      rendererRef.current = null;
     };
   }, []);
 
@@ -52,10 +61,9 @@ export const FarmCanvas: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full relative rounded-lg overflow-hidden border border-[var(--color-border)] bg-[var(--color-night)] flex items-center justify-center shadow-inner"
+      className="w-full h-full min-h-[300px] flex items-center justify-center bg-[var(--color-night)] rounded-lg overflow-hidden border border-[var(--color-border)] relative"
     >
       <canvas ref={canvasRef} className="block w-full h-full" />
     </div>
   );
 };
-

@@ -23,9 +23,11 @@ export class PixiFarmRenderer {
   private ambientSkyOverlay: Graphics | null = null;
   private tileSize = 64;
 
+  private isInitialized = false;
+
   public async init(canvas: HTMLCanvasElement, width: number, height: number): Promise<void> {
-    this.app = new Application();
-    await this.app.init({
+    const app = new Application();
+    await app.init({
       canvas,
       width,
       height,
@@ -34,6 +36,8 @@ export class PixiFarmRenderer {
       autoDensity: true,
       antialias: true,
     });
+    this.app = app;
+    this.isInitialized = true;
 
     this.container = new Container();
     this.app.stage.addChild(this.container);
@@ -275,8 +279,15 @@ export class PixiFarmRenderer {
 
   public destroy(): void {
     if (this.app) {
-      this.app.destroy(true, { children: true });
+      if (this.isInitialized) {
+        try {
+          this.app.destroy(true, { children: true });
+        } catch (e) {
+          console.warn('Pixi app destroy error:', e);
+        }
+      }
       this.app = null;
+      this.isInitialized = false;
     }
   }
 }
