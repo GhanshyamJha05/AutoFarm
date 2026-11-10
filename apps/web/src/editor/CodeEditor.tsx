@@ -1,10 +1,6 @@
 import React, { useRef, useEffect } from 'react';
-import Editor, { Monaco, loader } from '@monaco-editor/react';
-import * as monaco from 'monaco-editor';
+import Editor, { Monaco } from '@monaco-editor/react';
 import { DRONE_API_SPEC } from '@autofarm/simulation';
-
-// Configure Monaco loader to use the locally bundled monaco-editor package rather than fetching from remote jsdelivr CDN
-loader.config({ monaco });
 
 interface CodeEditorProps {
   code: string;
@@ -98,6 +94,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
           automaticLayout: true,
           tabSize: 4,
           insertSpaces: true,
+          wordBasedSuggestions: 'off',
         }}
       />
     </div>
