@@ -158,7 +158,7 @@ export class FarmGrid {
             speedMultiplier = 2.0;
           }
 
-          if (tile.crop.type === 'hay') speedMultiplier *= 2.5; // Fast initial crop
+          if (tile.crop.type === 'hay') speedMultiplier *= 10.0; // Fast initial crop for Level 1 introductory tutorials
 
           tile.crop.growth = Math.min(100, tile.crop.growth + growthCycles * 25 * speedMultiplier);
           tile.crop.stage = Math.min(3, Math.floor(tile.crop.growth / 33.34));

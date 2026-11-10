@@ -14,13 +14,13 @@ vi.mock('./renderer/PixiFarmRenderer', () => {
   };
 });
 
-// Mock Monaco Editor in JSDOM headless environment
-vi.mock('@monaco-editor/react', () => {
+// Mock CodeEditor in JSDOM headless environment
+vi.mock('./editor/CodeEditor', () => {
   return {
-    default: ({ value, onChange }: any) => (
+    CodeEditor: ({ code, onChange }: any) => (
       <textarea
-        data-testid="monaco-mock"
-        value={value}
+        data-testid="code-editor-mock"
+        value={code}
         onChange={(e) => onChange(e.target.value)}
       />
     ),
@@ -37,6 +37,6 @@ describe('Autofarm App UI', () => {
     expect(screen.getByText('Reset')).toBeTruthy();
     expect(screen.getByText(/Speed:/)).toBeTruthy();
     expect(screen.getByText('Execution Console')).toBeTruthy();
-    expect(screen.getByTestId('monaco-mock')).toBeTruthy();
+    expect(screen.getByTestId('code-editor-mock')).toBeTruthy();
   });
 });
