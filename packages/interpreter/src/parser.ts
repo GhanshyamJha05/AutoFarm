@@ -10,6 +10,8 @@ import {
   ReturnStatementNode,
   AssignmentNode,
   AugmentedAssignmentNode,
+  BinaryOperator,
+  UnaryOperator,
 } from './ast.js';
 
 export class ParserError extends Error {
@@ -93,7 +95,7 @@ export class Parser {
     if (!this.check(TokenType.RPAREN)) {
       do {
         const param = this.consume(TokenType.IDENTIFIER, 'Expected parameter name.');
-        params.push(param.value);
+        params.push(String(param.value));
       } while (this.match(TokenType.COMMA));
     }
     this.consume(TokenType.RPAREN, "Expected ')' after parameters.");
@@ -105,7 +107,7 @@ export class Parser {
 
     return {
       type: 'FunctionDef',
-      name: nameToken.value,
+      name: String(nameToken.value),
       params,
       body,
       span: { start: defToken.span.start, end },
@@ -190,7 +192,7 @@ export class Parser {
 
     return {
       type: 'ForStatement',
-      variable: varToken.value,
+      variable: String(varToken.value),
       iterable,
       body,
       span: { start: forToken.span.start, end },
@@ -332,7 +334,7 @@ export class Parser {
       const right = this.comparison();
       expr = {
         type: 'BinaryExpression',
-        operator: op.value,
+        operator: String(op.value) as BinaryOperator,
         left: expr,
         right,
         span: { start: expr.span.start, end: right.span.end },
@@ -350,7 +352,7 @@ export class Parser {
       const right = this.addition();
       expr = {
         type: 'BinaryExpression',
-        operator: op.value,
+        operator: String(op.value) as BinaryOperator,
         left: expr,
         right,
         span: { start: expr.span.start, end: right.span.end },
@@ -368,7 +370,7 @@ export class Parser {
       const right = this.multiplication();
       expr = {
         type: 'BinaryExpression',
-        operator: op.value,
+        operator: String(op.value) as BinaryOperator,
         left: expr,
         right,
         span: { start: expr.span.start, end: right.span.end },
@@ -386,7 +388,7 @@ export class Parser {
       const right = this.power();
       expr = {
         type: 'BinaryExpression',
-        operator: op.value,
+        operator: String(op.value) as BinaryOperator,
         left: expr,
         right,
         span: { start: expr.span.start, end: right.span.end },
@@ -419,7 +421,7 @@ export class Parser {
       const right = this.unary();
       return {
         type: 'UnaryExpression',
-        operator: op.value === 'not' ? 'not' : op.value,
+        operator: (op.value === 'not' ? 'not' : String(op.value)) as UnaryOperator,
         argument: right,
         span: { start: op.span.start, end: right.span.end },
       };
@@ -463,7 +465,7 @@ export class Parser {
         expr = {
           type: 'MemberExpression',
           object: expr,
-          property: prop.value,
+          property: String(prop.value),
           span: { start: expr.span.start, end: prop.span.end },
         };
       } else {
@@ -489,7 +491,7 @@ export class Parser {
     if (this.match(TokenType.IDENTIFIER)) {
       return {
         type: 'Identifier',
-        name: token.value,
+        name: String(token.value),
         span: token.span,
       };
     }

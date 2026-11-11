@@ -3,12 +3,7 @@ import {
   ProgramNode,
   StatementNode,
   ExpressionNode,
-  BinaryExpressionNode,
-  UnaryExpressionNode,
-  LogicalExpressionNode,
-  CallExpressionNode,
-  IndexExpressionNode,
-  MemberExpressionNode,
+  BaseNode,
 } from './ast.js';
 import { Environment, RuntimeError } from './environment.js';
 import { TickCosts, DEFAULT_TICK_COSTS } from './costs.js';
@@ -21,9 +16,9 @@ export interface ExecutionYield {
   totalTicks: number;
   nodeSpan?: SourceSpan;
   actionName?: string;
-  actionArgs?: any[];
+  actionArgs?: unknown[];
   printOutput?: string;
-  result?: any;
+  result?: unknown;
 }
 
 export interface UserFunction {
@@ -40,7 +35,7 @@ export interface ExecutionOptions {
   tickCosts?: Partial<TickCosts>;
   featureGate?: FeatureGate;
   seed?: number;
-  hostContext?: Record<string, any>;
+  hostContext?: Record<string, unknown>;
   onPrint?: (text: string) => void;
 }
 
@@ -52,7 +47,7 @@ export class ExecutionBudgetExceededError extends Error {
 }
 
 class ControlJump {
-  constructor(public kind: 'return' | 'break' | 'continue', public value?: any) {}
+  constructor(public kind: 'return' | 'break' | 'continue', public value?: unknown) {}
 }
 
 export class Interpreter {
@@ -64,7 +59,7 @@ export class Interpreter {
   private instructionCount = 0;
   private maxTicks: number;
   private maxInstructions: number;
-  private hostContext: Record<string, any>;
+  private hostContext: Record<string, unknown>;
   private prints: string[] = [];
   private onPrint?: (text: string) => void;
 
@@ -86,8 +81,8 @@ export class Interpreter {
     };
 
     // Register builtins
-    const globals: Record<string, any> = {
-      print: (...args: any[]) => {
+    const globals: Record<string, unknown> = {
+      print: (...args: unknown[]) => {
         const text = args
           .map((a) => (typeof a === 'object' && a !== null ? JSON.stringify(a) : String(a)))
           .join(' ');
@@ -110,20 +105,20 @@ export class Interpreter {
         }
         return res;
       },
-      len: (item: any) => {
+      len: (item: unknown) => {
         if (item === null || item === undefined) return 0;
         if (Array.isArray(item) || typeof item === 'string') return item.length;
         if (typeof item === 'object') return Object.keys(item).length;
         return 0;
       },
       abs: (x: number) => Math.abs(x),
-      min: (...args: any[]) => {
+      min: (...args: unknown[]) => {
         const flat = args.length === 1 && Array.isArray(args[0]) ? args[0] : args;
-        return Math.min(...flat);
+        return Math.min(...(flat as number[]));
       },
-      max: (...args: any[]) => {
+      max: (...args: unknown[]) => {
         const flat = args.length === 1 && Array.isArray(args[0]) ? args[0] : args;
-        return Math.max(...flat);
+        return Math.max(...(flat as number[]));
       },
       random: () => this.rng.nextFloat(),
       randint: (min: number, max: number) => this.rng.nextRange(min, max),
@@ -145,14 +140,14 @@ export class Interpreter {
     return [...this.prints];
   }
 
-  public getScopeSnapshot(): Record<string, any> {
+  public getScopeSnapshot(): Record<string, unknown> {
     return this.env.getSnapshot();
   }
 
   /**
    * Steppable Generator execution.
    */
-  public *run(program: ProgramNode): Generator<ExecutionYield, any, void> {
+  public *run(program: ProgramNode): Generator<ExecutionYield, unknown, void> {
     // 1. Static Feature Validation against tech-tree gating
     this.featureGate.validateAST(program);
 
@@ -175,8 +170,8 @@ export class Interpreter {
     return null;
   }
 
-  private *executeStatement(stmt: StatementNode): Generator<ExecutionYield, any, void> {
-    this.countInstruction(stmt.span);
+  private *executeStatement(stmt: StatementNode): Generator<ExecutionYield, unknown, void> {
+    this.countInstruction();
 
     switch (stmt.type) {
       case 'ExpressionStatement': {
@@ -201,7 +196,7 @@ export class Interpreter {
             }
             obj[i] = val;
           } else if (typeof obj === 'object' && obj !== null) {
-            obj[idx] = val;
+            (obj as Record<string, unknown>)[String(idx)] = val;
           } else {
             throw new RuntimeError('Target does not support indexing assignment.', stmt.target.span);
           }
@@ -385,13 +380,15 @@ export class Interpreter {
         return new ControlJump('break');
       case 'ContinueStatement':
         return new ControlJump('continue');
-      default:
-        throw new RuntimeError(`Unknown statement type '${(stmt as any).type}'`, (stmt as any).span);
+      default: {
+        const unknownStmt = stmt as BaseNode;
+        throw new RuntimeError(`Unknown statement type '${unknownStmt.type}'`, unknownStmt.span);
+      }
     }
   }
 
-  private *evaluateExpression(expr: ExpressionNode): Generator<ExecutionYield, any, void> {
-    this.countInstruction(expr.span);
+  private *evaluateExpression(expr: ExpressionNode): Generator<ExecutionYield, unknown, void> {
+    this.countInstruction();
 
     switch (expr.type) {
       case 'Literal':
@@ -401,7 +398,7 @@ export class Interpreter {
         return this.env.get(expr.name, expr.span);
       }
       case 'UnaryExpression': {
-        const val = yield* this.evaluateExpression(expr.argument);
+        const val = (yield* this.evaluateExpression(expr.argument)) as number;
         yield* this.chargeTick(this.costs.arithmetic, expr.span);
         if (expr.operator === '-') return -val;
         if (expr.operator === '+') return +val;
@@ -412,28 +409,32 @@ export class Interpreter {
         const left = yield* this.evaluateExpression(expr.left);
         const right = yield* this.evaluateExpression(expr.right);
 
+        const lNum = left as number;
+        const rNum = right as number;
+
         switch (expr.operator) {
           case '+':
             yield* this.chargeTick(this.costs.arithmetic, expr.span);
             if (Array.isArray(left) && Array.isArray(right)) return [...left, ...right];
-            return left + right;
+            if (typeof left === 'string' || typeof right === 'string') return String(left) + String(right);
+            return lNum + rNum;
           case '-':
             yield* this.chargeTick(this.costs.arithmetic, expr.span);
-            return left - right;
+            return lNum - rNum;
           case '*':
             yield* this.chargeTick(this.costs.arithmetic, expr.span);
-            return left * right;
+            return lNum * rNum;
           case '/':
             yield* this.chargeTick(this.costs.arithmetic, expr.span);
-            if (right === 0) throw new RuntimeError('Division by zero.', expr.span);
-            return left / right;
+            if (rNum === 0) throw new RuntimeError('Division by zero.', expr.span);
+            return lNum / rNum;
           case '%':
             yield* this.chargeTick(this.costs.arithmetic, expr.span);
-            if (right === 0) throw new RuntimeError('Modulo by zero.', expr.span);
-            return left % right;
+            if (rNum === 0) throw new RuntimeError('Modulo by zero.', expr.span);
+            return lNum % rNum;
           case '**':
             yield* this.chargeTick(this.costs.arithmetic, expr.span);
-            return Math.pow(left, right);
+            return Math.pow(lNum, rNum);
           case '==':
             yield* this.chargeTick(this.costs.comparison, expr.span);
             return this.isEqual(left, right);
@@ -442,16 +443,16 @@ export class Interpreter {
             return !this.isEqual(left, right);
           case '<':
             yield* this.chargeTick(this.costs.comparison, expr.span);
-            return left < right;
+            return (left as number | string) < (right as number | string);
           case '<=':
             yield* this.chargeTick(this.costs.comparison, expr.span);
-            return left <= right;
+            return (left as number | string) <= (right as number | string);
           case '>':
             yield* this.chargeTick(this.costs.comparison, expr.span);
-            return left > right;
+            return (left as number | string) > (right as number | string);
           case '>=':
             yield* this.chargeTick(this.costs.comparison, expr.span);
-            return left >= right;
+            return (left as number | string) >= (right as number | string);
         }
         break;
       }
@@ -469,7 +470,7 @@ export class Interpreter {
       }
       case 'CallExpression': {
         const callee = yield* this.evaluateExpression(expr.callee);
-        const args: any[] = [];
+        const args: unknown[] = [];
         for (const argNode of expr.args) {
           args.push(yield* this.evaluateExpression(argNode));
         }
@@ -496,7 +497,7 @@ export class Interpreter {
         }
 
         // User Defined Function Check
-        if (callee && callee.__isUserFunction) {
+        if (callee && typeof callee === 'object' && '__isUserFunction' in callee) {
           const userFn = callee as UserFunction;
           yield* this.chargeTick(this.costs.functionCall, expr.span);
 
@@ -543,10 +544,12 @@ export class Interpreter {
         }
 
         if (typeof obj === 'object' && obj !== null) {
-          if (obj[idx] === undefined) {
-            throw new RuntimeError(`KeyError: '${idx}' not found in dict.`, expr.span);
+          const dict = obj as Record<string, unknown>;
+          const key = String(idx);
+          if (dict[key] === undefined) {
+            throw new RuntimeError(`KeyError: '${key}' not found in dict.`, expr.span);
           }
-          return obj[idx];
+          return dict[key];
         }
 
         throw new RuntimeError(`Value of type '${typeof obj}' is not subscriptable.`, expr.span);
@@ -562,7 +565,7 @@ export class Interpreter {
         // Support string/list methods like .append(), .keys() safely
         if (Array.isArray(obj)) {
           if (expr.property === 'append') {
-            return (item: any) => obj.push(item);
+            return (item: unknown) => obj.push(item);
           }
           if (expr.property === 'pop') {
             return () => obj.pop();
@@ -570,7 +573,8 @@ export class Interpreter {
         }
 
         if (typeof obj === 'object' && expr.property in obj) {
-          const val = obj[expr.property];
+          const record = obj as Record<string, unknown>;
+          const val = record[expr.property];
           if (typeof val === 'function') return val.bind(obj);
           return val;
         }
@@ -579,7 +583,7 @@ export class Interpreter {
       }
       case 'List': {
         yield* this.chargeTick(this.costs.listAlloc, expr.span);
-        const elements: any[] = [];
+        const elements: unknown[] = [];
         for (const el of expr.elements) {
           elements.push(yield* this.evaluateExpression(el));
         }
@@ -587,7 +591,7 @@ export class Interpreter {
       }
       case 'Dict': {
         yield* this.chargeTick(this.costs.dictAlloc, expr.span);
-        const dict: Record<string, any> = {};
+        const dict: Record<string, unknown> = {};
         for (const entry of expr.entries) {
           const k = yield* this.evaluateExpression(entry.key);
           const v = yield* this.evaluateExpression(entry.value);
@@ -597,7 +601,7 @@ export class Interpreter {
       }
       case 'Tuple': {
         yield* this.chargeTick(this.costs.listAlloc, expr.span);
-        const elements: any[] = [];
+        const elements: unknown[] = [];
         for (const el of expr.elements) {
           elements.push(yield* this.evaluateExpression(el));
         }
@@ -605,7 +609,8 @@ export class Interpreter {
       }
     }
 
-    throw new RuntimeError(`Unknown expression type '${(expr as any).type}'`, (expr as any).span);
+    const unknownExpr = expr as BaseNode;
+    throw new RuntimeError(`Unknown expression type '${unknownExpr.type}'`, unknownExpr.span);
   }
 
   private *chargeTick(ticks: number, span?: SourceSpan): Generator<ExecutionYield, void, void> {
@@ -625,7 +630,7 @@ export class Interpreter {
     };
   }
 
-  private countInstruction(span: SourceSpan): void {
+  private countInstruction(): void {
     this.instructionCount++;
     if (this.instructionCount > this.maxInstructions) {
       throw new ExecutionBudgetExceededError(
@@ -635,14 +640,14 @@ export class Interpreter {
     }
   }
 
-  private isTruthy(val: any): boolean {
+  private isTruthy(val: unknown): boolean {
     if (val === false || val === null || val === undefined || val === 0 || val === '') return false;
     if (Array.isArray(val) && val.length === 0) return false;
     if (typeof val === 'object' && Object.keys(val).length === 0) return false;
     return true;
   }
 
-  private isEqual(a: any, b: any): boolean {
+  private isEqual(a: unknown, b: unknown): boolean {
     if (a === b) return true;
     if (Array.isArray(a) && Array.isArray(b)) {
       if (a.length !== b.length) return false;

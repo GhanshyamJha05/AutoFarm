@@ -21,7 +21,7 @@ export class TechTreeManager {
 
   constructor(initialUnlockedIds: string[] = ['t1_grass_harvest']) {
     for (const id of initialUnlockedIds) {
-      this.unlock(id, true);
+      this.unlock(id);
     }
   }
 

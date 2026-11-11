@@ -72,9 +72,11 @@ export enum TokenType {
   EOF = 'EOF',
 }
 
+export type TokenValue = string | number | boolean | null;
+
 export interface Token {
   type: TokenType;
-  value: unknown;
+  value: TokenValue;
   raw: string;
   span: SourceSpan;
 }
@@ -416,7 +418,7 @@ export class Lexer {
     const keywordType = KEYWORDS[name];
 
     if (keywordType !== undefined) {
-      let val: unknown = name;
+      let val: TokenValue = name;
       if (keywordType === TokenType.BOOLEAN) {
         val = name === 'True';
       } else if (keywordType === TokenType.NONE) {

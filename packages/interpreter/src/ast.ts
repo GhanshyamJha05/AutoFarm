@@ -122,15 +122,19 @@ export interface IdentifierNode extends BaseNode {
   name: string;
 }
 
+export type UnaryOperator = '-' | '+' | 'not';
+
 export interface UnaryExpressionNode extends BaseNode {
   type: 'UnaryExpression';
-  operator: '-' | '+' | 'not';
+  operator: UnaryOperator;
   argument: ExpressionNode;
 }
 
+export type BinaryOperator = '+' | '-' | '*' | '/' | '%' | '**' | '==' | '!=' | '<' | '<=' | '>' | '>=';
+
 export interface BinaryExpressionNode extends BaseNode {
   type: 'BinaryExpression';
-  operator: '+' | '-' | '*' | '/' | '%' | '**' | '==' | '!=' | '<' | '<=' | '>' | '>=';
+  operator: BinaryOperator;
   left: ExpressionNode;
   right: ExpressionNode;
 }
