@@ -40,7 +40,7 @@ ans = fib(7)
   it('charges realistic deterministic ticks and handles farm actions', () => {
     let moved = 0;
     const hostContext = {
-      move: (dir: string) => {
+      move: () => {
         moved++;
         return true;
       },
@@ -89,5 +89,17 @@ r2 = randint(1, 1000)
     expect(res1.scope.r1).toBe(res2.scope.r1);
     expect(res1.scope.r2).toBe(res2.scope.r2);
     expect(res1.scope.r1).not.toBe(res3.scope.r1);
+  });
+
+  it('guards against division and modulo by zero in augmented assignment', () => {
+    expect(() => runScript('x = 10\nx %= 0')).toThrowError(/Modulo by zero/);
+    expect(() => runScript('x = 10\nx /= 0')).toThrowError(/Division by zero/);
+  });
+
+  it('validates index in augmented assignment to list elements', () => {
+    expect(() => runScript('arr = [1, 2, 3]\narr[5] += 10')).toThrowError(/List index 5 out of range/);
+    expect(() => runScript('arr = [1, 2, 3]\narr["invalid"] += 10')).toThrowError(/List index must be an integer/);
+    const res = runScript('arr = [10, 20, 30]\narr[1] += 5');
+    expect(res.scope.arr).toEqual([10, 25, 30]);
   });
 });

@@ -212,35 +212,68 @@ export class Interpreter {
       }
       case 'AugmentedAssignment': {
         const delta = yield* this.evaluateExpression(stmt.value);
-        let currentVal: any;
+        let currentVal: unknown;
+        let targetObj: unknown;
+        let targetIndex: number | string | undefined;
 
         if (stmt.target.type === 'Identifier') {
           currentVal = this.env.get(stmt.target.name, stmt.target.span);
         } else if (stmt.target.type === 'IndexExpression') {
           const obj = yield* this.evaluateExpression(stmt.target.object);
           const idx = yield* this.evaluateExpression(stmt.target.index);
-          currentVal = obj[idx];
+          targetObj = obj;
+          if (Array.isArray(obj)) {
+            if (typeof idx !== 'number') {
+              throw new RuntimeError('List index must be an integer.', stmt.target.span);
+            }
+            const i = idx < 0 ? obj.length + idx : idx;
+            if (i < 0 || i >= obj.length) {
+              throw new RuntimeError(`List index ${idx} out of range [0, ${obj.length - 1}].`, stmt.target.span);
+            }
+            targetIndex = i;
+            currentVal = obj[i];
+          } else if (typeof obj === 'object' && obj !== null) {
+            targetIndex = String(idx);
+            currentVal = (obj as Record<string, unknown>)[String(idx)];
+          } else {
+            throw new RuntimeError('Target does not support indexing assignment.', stmt.target.span);
+          }
         }
 
-        let updatedVal: any;
+        let updatedVal: unknown;
+        const c = currentVal as number;
+        const d = delta as number;
         switch (stmt.operator) {
-          case '+=': updatedVal = currentVal + delta; break;
-          case '-=': updatedVal = currentVal - delta; break;
-          case '*=': updatedVal = currentVal * delta; break;
-          case '/=':
-            if (delta === 0) throw new RuntimeError('Division by zero.', stmt.span);
-            updatedVal = currentVal / delta;
+          case '+=':
+            if (typeof currentVal === 'string' || typeof delta === 'string') {
+              updatedVal = String(currentVal) + String(delta);
+            } else if (Array.isArray(currentVal) && Array.isArray(delta)) {
+              updatedVal = [...currentVal, ...delta];
+            } else {
+              updatedVal = c + d;
+            }
             break;
-          case '%=': updatedVal = currentVal % delta; break;
+          case '-=': updatedVal = c - d; break;
+          case '*=': updatedVal = c * d; break;
+          case '/=':
+            if (d === 0) throw new RuntimeError('Division by zero.', stmt.span);
+            updatedVal = c / d;
+            break;
+          case '%=':
+            if (d === 0) throw new RuntimeError('Modulo by zero.', stmt.span);
+            updatedVal = c % d;
+            break;
         }
 
         yield* this.chargeTick(this.costs.arithmetic + this.costs.variableWrite, stmt.span);
         if (stmt.target.type === 'Identifier') {
           this.env.set(stmt.target.name, updatedVal);
         } else if (stmt.target.type === 'IndexExpression') {
-          const obj = yield* this.evaluateExpression(stmt.target.object);
-          const idx = yield* this.evaluateExpression(stmt.target.index);
-          obj[idx] = updatedVal;
+          if (Array.isArray(targetObj) && typeof targetIndex === 'number') {
+            targetObj[targetIndex] = updatedVal;
+          } else if (typeof targetObj === 'object' && targetObj !== null && targetIndex !== undefined) {
+            (targetObj as Record<string, unknown>)[String(targetIndex)] = updatedVal;
+          }
         }
         return updatedVal;
       }

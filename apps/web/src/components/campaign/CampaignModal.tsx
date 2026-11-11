@@ -1,7 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { CAMPAIGN_LEVELS, CampaignLevel } from '@autofarm/simulation';
-import { X, Star, Lock, CheckCircle, ChevronRight, Award } from 'lucide-react';
+import { X, Star, Lock, ChevronRight, Award } from 'lucide-react';
 
 interface CampaignModalProps {
   isOpen: boolean;
@@ -16,7 +16,7 @@ export const CampaignModal: React.FC<CampaignModalProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   const totalStars = Object.values(campaignProgress).reduce(
-    (acc, p: any) => acc + (p.stars || 0),
+    (acc, p) => acc + (p?.stars || 0),
     0
   );
 

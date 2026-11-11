@@ -4,7 +4,6 @@ import { Terminal } from 'lucide-react';
 
 export const ConsolePanel: React.FC = () => {
   const logs = useGameStore((s) => s.consoleLogs);
-  const errorMessage = useGameStore((s) => s.errorMessage);
 
   return (
     <div className="h-36 w-full flex flex-col bg-[#141e18] border border-[var(--color-border)] rounded-lg overflow-hidden font-mono text-xs">

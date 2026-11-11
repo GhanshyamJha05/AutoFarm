@@ -2,19 +2,18 @@ import {
   Lexer,
   Parser,
   Interpreter,
-  ExecutionYield,
   FeatureGate,
   LanguageFeature,
   SeededRNG,
 } from '@autofarm/interpreter';
 import { FarmGrid } from './farm.js';
-import { Drone, DroneState } from './drone.js';
+import { Drone } from './drone.js';
 import { Direction, CropType } from './api-spec.js';
 
 export interface ReplayAction {
   tick: number;
   action: string;
-  args: any[];
+  args: unknown[];
   drone: { x: number; y: number; facing: Direction };
 }
 
@@ -29,7 +28,7 @@ export interface SimulationResult {
     actions: ReplayAction[];
     finalTicks: number;
   };
-  gridSnapshot: any;
+  gridSnapshot: unknown;
 }
 
 export interface SimulationConfig {
@@ -53,7 +52,7 @@ export class SimulationEngine {
     this.drone = new Drone(0, 0);
   }
 
-  public createHostContext(interpreterGetter: () => Interpreter): Record<string, any> {
+  public createHostContext(interpreterGetter: () => Interpreter): Record<string, unknown> {
     return {
       move: (dir: string) => {
         const direction = dir as Direction;
@@ -167,8 +166,11 @@ export class SimulationEngine {
   }
 
   public execute(code: string): SimulationResult {
-    let interpreter!: Interpreter;
-    const hostContext = this.createHostContext(() => interpreter);
+    let interpreterRef: Interpreter | null = null;
+    const hostContext = this.createHostContext(() => {
+      if (!interpreterRef) throw new Error('Interpreter not initialized');
+      return interpreterRef;
+    });
 
     const lexer = new Lexer(code);
     const tokens = lexer.tokenize();
@@ -176,12 +178,13 @@ export class SimulationEngine {
     const ast = parser.parse();
 
     const featureGate = new FeatureGate(this.config.unlockedFeatures);
-    interpreter = new Interpreter({
+    const interpreter = new Interpreter({
       seed: this.config.seed ?? 1337,
       maxTicks: this.config.maxTicks ?? 2_000_000,
       featureGate,
       hostContext,
     });
+    interpreterRef = interpreter;
 
     const generator = interpreter.run(ast);
     let step = generator.next();

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Lexer } from '../src/lexer.js';
 import { Parser } from '../src/parser.js';
+import { AssignmentNode } from '../src/ast.js';
 
 describe('Parser', () => {
   it('parses function definitions and blocks', () => {
@@ -30,11 +31,11 @@ coord = (10, 20)
     const ast = parser.parse();
 
     expect(ast.body).toHaveLength(3);
-    const assign1 = ast.body[0] as any;
+    const assign1 = ast.body[0] as AssignmentNode;
     expect(assign1.value.type).toBe('List');
-    const assign2 = ast.body[1] as any;
+    const assign2 = ast.body[1] as AssignmentNode;
     expect(assign2.value.type).toBe('Dict');
-    const assign3 = ast.body[2] as any;
+    const assign3 = ast.body[2] as AssignmentNode;
     expect(assign3.value.type).toBe('Tuple');
   });
 

@@ -10,21 +10,6 @@ import {
   ReturnStatementNode,
   AssignmentNode,
   AugmentedAssignmentNode,
-  ExpressionStatementNode,
-  PassStatementNode,
-  BreakStatementNode,
-  ContinueStatementNode,
-  LiteralNode,
-  IdentifierNode,
-  UnaryExpressionNode,
-  BinaryExpressionNode,
-  LogicalExpressionNode,
-  CallExpressionNode,
-  IndexExpressionNode,
-  MemberExpressionNode,
-  ListNode,
-  DictNode,
-  TupleNode,
 } from './ast.js';
 
 export class ParserError extends Error {
@@ -250,7 +235,6 @@ export class Parser {
 
     // Assignment: target = expr
     if (this.match(TokenType.ASSIGN)) {
-      const assignToken = this.previous();
       const value = this.expression();
       this.consumeNewlineOrEof();
 
@@ -310,7 +294,6 @@ export class Parser {
     let expr = this.logicalAnd();
 
     while (this.match(TokenType.OR)) {
-      const op = this.previous();
       const right = this.logicalAnd();
       expr = {
         type: 'LogicalExpression',
@@ -328,7 +311,6 @@ export class Parser {
     let expr = this.equality();
 
     while (this.match(TokenType.AND)) {
-      const op = this.previous();
       const right = this.equality();
       expr = {
         type: 'LogicalExpression',
@@ -418,7 +400,6 @@ export class Parser {
     let expr = this.unary();
 
     while (this.match(TokenType.POWER)) {
-      const op = this.previous();
       const right = this.unary();
       expr = {
         type: 'BinaryExpression',
@@ -588,7 +569,7 @@ export class Parser {
         };
       }
 
-      const rparen = this.consume(TokenType.RPAREN, "Expected ')' after expression.");
+      this.consume(TokenType.RPAREN, "Expected ')' after expression.");
       return first; // Simple grouping
     }
 

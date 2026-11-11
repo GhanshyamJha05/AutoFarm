@@ -15,7 +15,7 @@ export function runScript(source: string, options: ExecutionOptions = {}): {
   ticks: number;
   instructions: number;
   prints: string[];
-  scope: Record<string, any>;
+  scope: Record<string, unknown>;
   yields: ExecutionYield[];
 } {
   const lexer = new Lexer(source);

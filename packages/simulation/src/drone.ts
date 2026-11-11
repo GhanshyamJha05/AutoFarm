@@ -1,4 +1,4 @@
-import { Direction, CropType } from './api-spec.js';
+import { Direction } from './api-spec.js';
 
 export interface DroneState {
   x: number;

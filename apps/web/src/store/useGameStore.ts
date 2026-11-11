@@ -1,15 +1,11 @@
 import { create } from 'zustand';
 import {
   SimulationEngine,
-  FarmGrid,
-  Drone,
   FarmTile,
   Direction,
   TechTreeManager,
   EconomyManager,
   CampaignManager,
-  CAMPAIGN_LEVELS,
-  CampaignLevel,
   LevelProgress,
 } from '@autofarm/simulation';
 import {
@@ -54,27 +50,12 @@ export interface GameState {
   toggleMute: () => void;
 }
 
-let activeGenerator: Generator<ExecutionYield, any, void> | null = null;
+let activeGenerator: Generator<ExecutionYield, unknown, void> | null = null;
 let activeEngine: SimulationEngine | null = null;
 let animFrameId: number | null = null;
 const techManager = new TechTreeManager(['t1_grass_harvest']);
 const economyManager = new EconomyManager(0, {});
 const campaignManager = new CampaignManager();
-
-const DEFAULT_SCRIPT = `# AUTOFARM: Automated Drone Script
-# Tier 1 Tutorial: Plant and harvest Golden Hay
-
-till()
-water()
-plant("hay")
-
-# Sweep across the farm
-for step in range(get_farm_size()):
-    move("east")
-    plant("hay")
-
-print("Field seeded successfully!")
-`;
 
 export const useGameStore = create<GameState>((set, get) => {
   const initEngine = (size: number) => {
@@ -210,7 +191,6 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     stepCode: () => {
-      const state = get();
       if (!activeGenerator) {
         get().runCode();
         get().pauseCode();
@@ -231,11 +211,12 @@ export const useGameStore = create<GameState>((set, get) => {
             activeLine: stepVal.nodeSpan ? stepVal.nodeSpan.start.line : null,
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
         set({
           status: 'error',
-          errorMessage: err.message,
-          consoleLogs: [...get().consoleLogs, `[Error] ${err.message}`],
+          errorMessage: msg,
+          consoleLogs: [...get().consoleLogs, `[Error] ${msg}`],
         });
       }
     },
@@ -262,9 +243,12 @@ export const useGameStore = create<GameState>((set, get) => {
             : techManager.getUnlockedFeatures();
           const featureGate = new FeatureGate(unlockedFeatures);
 
-          let interp!: Interpreter;
-          const hostContext = engine.createHostContext(() => interp);
-          interp = new Interpreter({
+          let interpRef: Interpreter | null = null;
+          const hostContext = engine.createHostContext(() => {
+            if (!interpRef) throw new Error('Interpreter not initialized');
+            return interpRef;
+          });
+          const interp = new Interpreter({
             seed: 1337,
             featureGate,
             hostContext,
@@ -272,6 +256,7 @@ export const useGameStore = create<GameState>((set, get) => {
               set((s) => ({ consoleLogs: [...s.consoleLogs, `[Log] ${msg}`] }));
             },
           });
+          interpRef = interp;
 
           activeGenerator = interp.run(ast);
           set({
@@ -279,11 +264,12 @@ export const useGameStore = create<GameState>((set, get) => {
             errorMessage: null,
             consoleLogs: ['[Engine] Execution started...'],
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
           set({
             status: 'error',
-            errorMessage: err.message,
-            consoleLogs: [...state.consoleLogs, `[Compile/Runtime Error] ${err.message}`],
+            errorMessage: msg,
+            consoleLogs: [...state.consoleLogs, `[Compile/Runtime Error] ${msg}`],
           });
           return;
         }
@@ -346,11 +332,12 @@ export const useGameStore = create<GameState>((set, get) => {
           }
 
           animFrameId = requestAnimationFrame(runLoop);
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
           set({
             status: 'error',
-            errorMessage: err.message,
-            consoleLogs: [...get().consoleLogs, `[Execution Error] ${err.message}`],
+            errorMessage: msg,
+            consoleLogs: [...get().consoleLogs, `[Execution Error] ${msg}`],
           });
           activeGenerator = null;
         }

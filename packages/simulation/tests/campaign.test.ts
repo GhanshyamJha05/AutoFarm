@@ -13,7 +13,6 @@ describe('Campaign & Replay Systems', () => {
 
   it('evaluates star criteria correctly based on ticks', () => {
     const manager = new CampaignManager();
-    const lvl1 = manager.getLevel('lvl_01')!;
 
     // 3 stars
     const r3 = manager.evaluateRun('lvl_01', 400, { hay: 1 }, 'plant("hay")\nharvest()');

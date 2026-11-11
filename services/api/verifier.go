@@ -202,7 +202,7 @@ func VerifyReplay(req ReplayVerificationRequest) ReplayVerificationResult {
 
 	return ReplayVerificationResult{
 		Valid:          true,
-		SimulatedTicks: req.ClaimedTicks,
+		SimulatedTicks: sim.ticks,
 		Reason:         "Replay verified successfully.",
 	}
 }

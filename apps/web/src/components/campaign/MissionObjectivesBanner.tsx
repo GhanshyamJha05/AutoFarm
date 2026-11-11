@@ -1,15 +1,13 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { CampaignLevel, CAMPAIGN_LEVELS } from '@autofarm/simulation';
-import { Target, HelpCircle, Award } from 'lucide-react';
+import { CAMPAIGN_LEVELS } from '@autofarm/simulation';
+import { Target, Award } from 'lucide-react';
 
 export const MissionObjectivesBanner: React.FC = () => {
   const currentLevelId = useGameStore((s) => s.currentLevelId);
   const inventory = useGameStore((s) => s.inventory);
-  const campaignProgress = useGameStore((s) => s.campaignProgress);
 
   const level = CAMPAIGN_LEVELS.find((l) => l.id === currentLevelId) || CAMPAIGN_LEVELS[0]!;
-  const progress = campaignProgress[level.id];
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-[#18261e] border-b border-[var(--color-border)] text-xs">

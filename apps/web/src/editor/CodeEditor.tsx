@@ -48,8 +48,6 @@ const activeLineField = StateField.define<DecorationSet>({
 export const CodeEditor: React.FC<CodeEditorProps> = ({
   code,
   onChange,
-  activeLine,
-  errorMessage,
 }) => {
   // Autocomplete provider for AutoFarm Drone API
   const droneCompletion = useMemo(() => {

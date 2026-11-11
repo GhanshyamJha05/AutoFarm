@@ -74,7 +74,7 @@ export enum TokenType {
 
 export interface Token {
   type: TokenType;
-  value: any;
+  value: unknown;
   raw: string;
   span: SourceSpan;
 }
@@ -416,7 +416,7 @@ export class Lexer {
     const keywordType = KEYWORDS[name];
 
     if (keywordType !== undefined) {
-      let val: any = name;
+      let val: unknown = name;
       if (keywordType === TokenType.BOOLEAN) {
         val = name === 'True';
       } else if (keywordType === TokenType.NONE) {

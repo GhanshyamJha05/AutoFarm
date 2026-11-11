@@ -17,7 +17,7 @@ vi.mock('./renderer/PixiFarmRenderer', () => {
 // Mock CodeEditor in JSDOM headless environment
 vi.mock('./editor/CodeEditor', () => {
   return {
-    CodeEditor: ({ code, onChange }: any) => (
+    CodeEditor: ({ code, onChange }: { code: string; onChange: (val: string) => void }) => (
       <textarea
         data-testid="code-editor-mock"
         value={code}

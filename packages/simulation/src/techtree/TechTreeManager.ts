@@ -1,4 +1,4 @@
-import { TECH_TREE_NODES, TechNode, TechCost } from './tech-tree-data.js';
+import { TECH_TREE_NODES, TechNode } from './tech-tree-data.js';
 import { LanguageFeature } from '@autofarm/interpreter';
 import { CropType } from '../api-spec.js';
 
@@ -66,7 +66,7 @@ export class TechTreeManager {
     return { allowed: true };
   }
 
-  public unlock(id: string, bypassCost = false): boolean {
+  public unlock(id: string): boolean {
     const node = this.getNode(id);
     if (!node) return false;
 

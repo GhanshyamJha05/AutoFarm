@@ -2,7 +2,7 @@ import { SourceSpan } from './lexer.js';
 
 export interface ScopeFrame {
   name: string;
-  variables: Map<string, any>;
+  variables: Map<string, unknown>;
   parent?: ScopeFrame;
 }
 
@@ -20,8 +20,8 @@ export class RuntimeError extends Error {
 export class Environment {
   private current: ScopeFrame;
 
-  constructor(globalVariables: Record<string, any> = {}) {
-    const rootMap = new Map<string, any>();
+  constructor(globalVariables: Record<string, unknown> = {}) {
+    const rootMap = new Map<string, unknown>();
     for (const [k, v] of Object.entries(globalVariables)) {
       rootMap.set(k, v);
     }
@@ -34,7 +34,7 @@ export class Environment {
   public pushScope(name: string): void {
     this.current = {
       name,
-      variables: new Map<string, any>(),
+      variables: new Map<string, unknown>(),
       parent: this.current,
     };
   }
@@ -45,7 +45,7 @@ export class Environment {
     }
   }
 
-  public get(name: string, span: SourceSpan): any {
+  public get(name: string, span: SourceSpan): unknown {
     let scope: ScopeFrame | undefined = this.current;
     while (scope) {
       if (scope.variables.has(name)) {
@@ -56,7 +56,7 @@ export class Environment {
     throw new RuntimeError(`Name '${name}' is not defined.`, span, `Did you forget to define or assign '${name}'?`);
   }
 
-  public set(name: string, value: any): void {
+  public set(name: string, value: unknown): void {
     // If variable exists in an existing scope chain, update it there, else set in current scope
     let scope: ScopeFrame | undefined = this.current;
     while (scope) {
@@ -69,7 +69,7 @@ export class Environment {
     this.current.variables.set(name, value);
   }
 
-  public setLocal(name: string, value: any): void {
+  public setLocal(name: string, value: unknown): void {
     this.current.variables.set(name, value);
   }
 
@@ -82,8 +82,8 @@ export class Environment {
     return false;
   }
 
-  public getSnapshot(): Record<string, any> {
-    const result: Record<string, any> = {};
+  public getSnapshot(): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
     let scope: ScopeFrame | undefined = this.current;
     const scopes: ScopeFrame[] = [];
     while (scope) {

@@ -23,7 +23,7 @@ export interface CropState {
 export interface ApiMethodSpec {
   name: string;
   category: 'motion' | 'farming' | 'sensing' | 'inventory';
-  params: { name: string; type: string; description: string; default?: any }[];
+  params: { name: string; type: string; description: string; default?: unknown }[];
   returnType: string;
   tickCost: number;
   description: string;
